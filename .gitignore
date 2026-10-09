@@ -1,6 +1,8 @@
 build/
-demo/assets/
-dist/
 install/
+dist/
+dtb/
+demo/assets/
+demo/site/
 logs/
 tools/

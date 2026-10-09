@@ -1,42 +1,69 @@
 # spikey — Spike (RISC-V ISA simulator) → WebAssembly
 
-Tools are git submodules under `third_party/`:
+Builds upstream Spike for Node and the browser **without modifying Spike's sources**.
+`third_party/riscv-isa-sim` stays a pristine upstream checkout; every wasm-specific
+choice lives in `scripts/env.sh` and the demo's JavaScript.
 
-| Path | Upstream |
+| Path | What |
 |---|---|
-| third_party/riscv-isa-sim | riscv-software-src/riscv-isa-sim |
-| third_party/riscv-tests | riscv-software-src/riscv-tests |
-| third_party/emsdk | emscripten-core/emsdk |
+| `third_party/riscv-isa-sim` | Spike, upstream (submodule, never edited) |
+| `third_party/riscv-tests` | ISA tests + benchmarks (submodule) |
+| `third_party/emsdk` | Emscripten SDK (submodule; toolchain installed locally, 6.0.12) |
+| `scripts/` | build, verify and update pipeline |
+| `demo/web/` | browser demo source (page + Web Worker) |
+| `demo/programs.json`, `demo/make-bundle.py` | which programs the demo ships, and the bundler |
+| `tools/` *(ignored)* | static `dtc`, xPack `riscv-none-elf-gcc` 14.2.0-3 |
 
-## Steps
+## One-time setup
 ```bash
-./scripts/setup-tools.sh            # apt deps + emsdk install/activate
-./scripts/build-native.sh           # reference spike + spike.dtb
-./scripts/build-tests.sh            # riscv-tests ISA suite
-./scripts/build-wasm.sh node        # dist/spike.js + spike.wasm
-./scripts/run-suite.sh wasm         # run suite under node (native: run-suite.sh native)
-./scripts/build-wasm.sh web         # dist/spike-web.js for the browser
+git submodule update --init --recursive --depth 1
+./scripts/setup-tools.sh                       # RISC-V GCC, dtc check, emsdk install/activate
 ```
-Override ISA/memory with `ISA=rv32gc MEM=128 ./scripts/...` (rebuild the DTB if you change them).
 
-Notes: wasm can't fork `dtc`, so always pass `--dtb=spike.dtb`; `-fwasm-exceptions` is required because Spike throws on every trap.
+## Build everything for the current Spike commit
+```bash
+./scripts/build-all.sh     # native → tests → wasm → verify → demo
+python3 -m http.server -d demo/site 8080       # open http://localhost:8080
+```
+Steps (each resumable, safe to re-run):
 
-## Status
-- Native and wasm (Node) Spike both pass 109/109 rv64u{i,m,a,f,d,c}-p tests (`ma_data` skipped: misaligned access not emulated by default; fails identically on both).
-- Instruction traces (`-l`) are byte-identical native vs wasm on all 121 tests incl. zfh.
-- wasm32 source fix: `patches/riscv-isa-sim-wasm32.patch` (applied by build-wasm.sh).
-- rv64ua: amocas/zabha tests skipped — xPack GCC 14 lacks zacas/zabha.
-- `spike.dts` / `spike.dtb` committed (rv64gc, 256 MB).
-- Emscripten 6.0.12 is installed in third_party/emsdk from the host (the Cowork VM can't reach storage.googleapis.com).
+| Script | Output |
+|---|---|
+| `build-native.sh` | `install/native/bin/spike`, `dtb/<isa>.dtb` (rv64gc, rv64imac, rv64gcv) |
+| `build-tests.sh` | `build/tests/isa/*` (incl. rv64ua via rv64g), `build/bench/*.riscv`, `hello.riscv` |
+| `build-wasm.sh` | `dist/node/spike.{js,wasm}`, `dist/web/spike.{js,wasm}` |
+| `verify.sh` | gate: native + wasm pass the rv64u* suite, `-l` traces byte-identical; writes `dist/verify.json` |
+| `build-demo.sh` | `demo/site/` ready to serve or publish (build info embedded in `bundle.json`) |
+
+Build directories are per Spike commit: `build/spike-<sha12>/{native,wasm}` (set `BUILD_ROOT` for a faster disk).
+
+## Updating Spike
+```bash
+./scripts/update-spike.sh            # latest upstream master
+./scripts/update-spike.sh <sha|tag>  # specific ref
+```
+Moves the submodule, runs `build-all.sh` in a fresh build dir, and commits the new
+submodule pointer only if `verify.sh` passes. On any failure it restores the previous
+commit and keeps the failed build dir for inspection. It refuses to run if the
+submodule has local edits.
+
+## How the port works without source changes
+- **64→32-bit narrowing** (`riscv/mmu.cc`, TLB refill): clang treats it as a default-error
+  warning on wasm32; `-Wno-c++11-narrowing` restores the intended 32-bit truncation.
+- **C++ exceptions**: Spike throws on every trap → `-fwasm-exceptions`.
+- **`--export-dynamic`** (added by Spike's configure for `--extlib`): dropped by overriding
+  the `mcppbs-LDFLAGS` make variable at link time → browser JS 91 KB, wasm 7.9 MB.
+- **Device tree**: wasm can't fork `dtc`, so DTBs are generated natively and passed with
+  `--dtb`. Spike takes the hart ISA from the DTB, hence one DTB per ISA.
+- **Interactive debugger in the browser** (`-d`): commands are replayed from reset
+  (Spike is deterministic). Spike reads debugger input from fd 2; the worker routes
+  `FS.read` on fd 2 to stdin.
+
+## Status (spike d6cfe9efdb53, emscripten 6.0.12)
+- Native and wasm: 109/109 rv64u{i,m,a,f,d,c}-p (`ma_data` skipped: misaligned access not emulated by default).
+- Instruction traces identical native vs wasm on 110 tests.
+- rv64ua `amocas*` skipped: GCC 14 lacks Zacas.
 
 ## Building inside the Claude Cowork VM
-Shared-folder I/O is slow and limits open files, so build objects on VM-local disk:
-`BUILD_ROOT=$HOME/work ./scripts/build-native.sh` (re-run to resume; each shell call is time-limited).
-
-## Browser demo (`demo/`)
-- `demo/web/index.html` + `worker.js`: page that runs Spike in a Web Worker (one worker per run; the wasm module is compiled once and shared).
-- Browser link (no `--export-dynamic`, so JS is 91 KB and wasm 7.9 MB):
-  `em++ -O2 -fwasm-exceptions -sALLOW_MEMORY_GROWTH=1 -sMAXIMUM_MEMORY=4GB -sSTACK_SIZE=8MB -sMODULARIZE=1 -sEXPORT_NAME=createSpike -sINVOKE_RUN=0 -sEXIT_RUNTIME=1 -sFORCE_FILESYSTEM=1 -sENVIRONMENT=web,worker -sEXPORTED_RUNTIME_METHODS=FS,callMain extension.o spike.o libspike_main.a libriscv.a libdisasm.a libsoftfloat.a libfesvr.a libfdt.a -o spike-web.js`
-- With `--dtb`, Spike takes the hart ISA from the device tree, so the demo ships one DTB per ISA (rv64gc, rv64imac, rv64gcv).
-- `demo/src/hello.c`: bare-metal hello built against riscv-tests/benchmarks/common (printf over HTIF).
-- Debug mode drives `spike -d` by replay: each command re-runs from reset with the full command history on stdin (Spike is deterministic). Spike reads debugger input from fd 2, so the worker routes `FS.read` on fd 2 to stdin; no rebuild needed. ELF symbols are resolved in JS (`until pc 0 main`).
+Shell calls there are time-limited: use `BUILD_ROOT=$HOME/work` (VM-local disk; the shared
+folder is slow and limits open files) and re-run a step until it finishes.

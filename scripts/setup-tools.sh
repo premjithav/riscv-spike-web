@@ -14,4 +14,4 @@ if [ ! -x "$ROOT/tools/riscv-none-elf-gcc/bin/riscv-none-elf-gcc" ]; then
 fi
 command -v dtc >/dev/null || { echo "dtc missing: apt install device-tree-compiler, or put a static dtc in tools/bin"; exit 1; }
 # emsdk downloads from storage.googleapis.com — must be reachable
-cd "$EMSDK" && ./emsdk install latest && ./emsdk activate latest
+cd "$EMSDK" && ./emsdk install 6.0.12 && ./emsdk activate 6.0.12

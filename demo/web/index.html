@@ -17,6 +17,7 @@
   --term-fg: #d5dde7;
   --term-dim: #7f8b9b;
   --term-err: #f0a35e;
+  --prompt: #8fb4ff;
   --ok: #1d8049;
   --ok-soft: #e1f2e8;
   --bad: #b8332c;
@@ -32,7 +33,7 @@
   :root:not([data-theme="light"]) {
     --bg: #0e131a; --panel: #161d27; --ink: #e3e8ef; --muted: #96a1b0; --line: #2a3340;
     --accent: #7d9df0; --accent-ink: #0e131a; --accent-soft: #1f2a42;
-    --term-bg: #090d12; --term-fg: #d5dde7; --term-dim: #6f7b8b; --term-err: #f0a35e;
+    --term-bg: #090d12; --term-fg: #d5dde7; --term-dim: #6f7b8b; --term-err: #f0a35e; --prompt: #8fb4ff;
     --ok: #5cc98a; --ok-soft: #15301f; --bad: #f08a83; --bad-soft: #3a1a18; --run: #f0c060; --run-soft: #352a12;
     color-scheme: dark;
   }
@@ -40,7 +41,7 @@
 :root[data-theme="dark"] {
   --bg: #0e131a; --panel: #161d27; --ink: #e3e8ef; --muted: #96a1b0; --line: #2a3340;
   --accent: #7d9df0; --accent-ink: #0e131a; --accent-soft: #1f2a42;
-  --term-bg: #090d12; --term-fg: #d5dde7; --term-dim: #6f7b8b; --term-err: #f0a35e;
+  --term-bg: #090d12; --term-fg: #d5dde7; --term-dim: #6f7b8b; --term-err: #f0a35e; --prompt: #8fb4ff;
   --ok: #5cc98a; --ok-soft: #15301f; --bad: #f08a83; --bad-soft: #3a1a18; --run: #f0c060; --run-soft: #352a12;
   color-scheme: dark;
 }
@@ -109,18 +110,50 @@ pre#out .sys { color: var(--term-dim); font-style: italic; }
 .notes p { margin: 0; }
 .notes code { font-family: var(--font-mono); font-size: 12px; color: var(--ink); }
 @media (prefers-reduced-motion: no-preference) { .pill { transition: background 0.15s, color 0.15s; } }
+
+.seg { display: grid; grid-template-columns: 1fr 1fr; border: 1px solid var(--line); border-radius: 4px; overflow: hidden; }
+.seg label { text-align: center; padding: 7px 8px; font-weight: 500; font-size: 13px; cursor: pointer; }
+.seg input { position: absolute; opacity: 0; pointer-events: none; }
+.seg label:has(input:checked) { background: var(--accent); color: var(--accent-ink); }
+.seg label:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: -2px; }
+.hint { color: var(--muted); font-size: 12px; margin: 0; }
+.syms-filter { font: 13px var(--font-mono); padding: 6px 8px; border-radius: 4px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); width: 100%; }
+.syms { display: grid; gap: 1px; max-height: 260px; overflow-y: auto; margin-inline: -6px; padding-inline: 6px; }
+.sym { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; text-align: left; font: 12px var(--font-mono); padding: 4px 8px; border: 0; border-radius: 4px; background: transparent; color: var(--ink); cursor: pointer; }
+.sym span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sym span:last-child { color: var(--muted); font-variant-numeric: tabular-nums; }
+.sym:hover, .sym:focus-visible { background: var(--accent-soft); outline: none; }
+.dbg { display: grid; gap: 8px; padding: 10px 14px 12px; border-top: 1px solid color-mix(in srgb, var(--term-fg) 14%, transparent); }
+.dbg-line { display: flex; align-items: center; gap: 8px; font: 13px var(--font-mono); }
+.dbg-line label { color: var(--prompt); white-space: nowrap; }
+.dbg-line input { flex: 1; min-width: 0; font: 13px var(--font-mono); background: transparent; color: var(--term-fg); border: 1px solid color-mix(in srgb, var(--term-fg) 22%, transparent); border-radius: 4px; padding: 6px 8px; }
+.dbg-line input:focus-visible { outline: 2px solid var(--prompt); outline-offset: 0; }
+.quick { display: flex; flex-wrap: wrap; gap: 6px; }
+.qbtn { font: 12px var(--font-mono); padding: 4px 9px; border-radius: 4px; cursor: pointer; background: color-mix(in srgb, var(--term-fg) 8%, transparent); color: var(--term-fg); border: 1px solid color-mix(in srgb, var(--term-fg) 18%, transparent); }
+.qbtn:hover { border-color: var(--prompt); }
+.qbtn:focus-visible { outline: 2px solid var(--prompt); outline-offset: 1px; }
+.qbtn:disabled { opacity: 0.45; cursor: not-allowed; }
+.qbtn.sep { margin-left: auto; }
+pre#out .c { color: var(--prompt); }
+pre#out .c i { color: var(--term-dim); font-style: normal; }
+pre#out .d { color: var(--term-fg); }
+.where { font-family: var(--font-mono); font-size: 12px; color: var(--term-fg); white-space: nowrap; }
+.ref { display: grid; grid-template-columns: max-content 1fr; gap: 2px 16px; margin: 4px 0 0; font-size: 13px; }
+.ref dt { font-family: var(--font-mono); font-size: 12px; color: var(--ink); }
+.ref dd { margin: 0; }
+@media (max-width: 520px) { .ref { grid-template-columns: minmax(0, 1fr); } .ref dd { margin-bottom: 6px; } .qbtn.sep { margin-left: 0; } }
 </style>
 
 <div class="wrap">
   <header>
     <div>
       <h1>Spike <span>Wasm</span> Console</h1>
-      <p class="sub">The RISC-V ISA simulator, compiled to WebAssembly and running in this tab. Pick a program, choose a hart ISA, and run it.</p>
+      <p class="sub">The RISC-V ISA simulator, compiled to WebAssembly and running in this tab. Run a program, or step through it with Spike's interactive debugger.</p>
     </div>
     <div class="engine" aria-label="Build details">
       <span>engine <b>spike-web.wasm</b></span>
-      <span>emscripten <b>6.0.12</b></span>
-      <span>riscv-isa-sim <b>d6cfe9e</b></span>
+      <span>emscripten <b id="b-emcc">…</b></span>
+      <span>riscv-isa-sim <b id="b-spike">…</b></span>
       <span>memory <b>256 MiB</b></span>
     </div>
   </header>
@@ -138,6 +171,14 @@ pre#out .sys { color: var(--term-dim); font-style: italic; }
         </div>
       </section>
       <section>
+        <p class="label">Mode</p>
+        <div class="seg" role="radiogroup" aria-label="Mode">
+          <label for="mode-run"><input type="radio" name="mode" id="mode-run" value="run" checked>Run</label>
+          <label for="mode-debug"><input type="radio" name="mode" id="mode-debug" value="debug">Debug</label>
+        </div>
+        <p class="hint" id="mode-hint">Runs the program to completion.</p>
+      </section>
+      <section>
         <p class="label">Hart</p>
         <div class="field">
           <label for="isa">ISA (device tree generated per ISA)</label>
@@ -147,65 +188,152 @@ pre#out .sys { color: var(--term-dim); font-style: italic; }
             <option value="rv64gcv">rv64gcv · with vector</option>
           </select>
         </div>
-        <label class="check" for="trace">
+        <label class="check" for="trace" id="trace-row">
           <input type="checkbox" id="trace">
           <span>Instruction trace <code>-l</code><small>Shows the first 4,000 retired instructions.</small></span>
         </label>
+      </section>
+      <section id="syms-section" hidden>
+        <p class="label">Symbols</p>
+        <input class="syms-filter" id="sym-filter" type="search" placeholder="Filter, e.g. main" aria-label="Filter symbols">
+        <div class="syms" id="syms"></div>
+        <p class="hint">Click a symbol to run until the PC reaches it.</p>
       </section>
       <section>
         <div class="actions">
           <button class="btn primary" type="submit" id="run" disabled>Run</button>
           <button class="btn" type="button" id="stop" disabled>Stop</button>
         </div>
-        <kbd>Ctrl + Enter runs the selected program</kbd>
+        <kbd id="run-hint">Ctrl + Enter runs the selected program</kbd>
       </section>
     </form>
 
-    <div class="console" aria-live="polite">
+    <div class="console">
       <div class="bar">
         <span class="cmd" id="cmd">$ spike</span>
+        <span class="where" id="where" hidden></span>
         <span class="meta" id="meta"></span>
         <span class="pill" id="pill">loading</span>
       </div>
-      <pre id="out"><span class="sys">Fetching and compiling spike-web.wasm (7.9 MB)…</span></pre>
+      <pre id="out" aria-live="polite"><span class="sys">Fetching and compiling spike-web.wasm (7.9 MB)…</span></pre>
+      <form class="dbg" id="dbg" hidden autocomplete="off">
+        <div class="dbg-line">
+          <label for="dbg-cmd">(spike)</label>
+          <input id="dbg-cmd" type="text" spellcheck="false" placeholder="until pc 0 main   ·   Enter on an empty line steps one instruction">
+        </div>
+        <div class="quick">
+          <button class="qbtn" type="button" data-cmd="">step</button>
+          <button class="qbtn" type="button" data-cmd="r 10">r 10</button>
+          <button class="qbtn" type="button" data-cmd="r 100">r 100</button>
+          <button class="qbtn" type="button" data-cmd="insn 0">insn</button>
+          <button class="qbtn" type="button" data-cmd="pc 0">pc</button>
+          <button class="qbtn" type="button" data-cmd="reg 0">regs</button>
+          <button class="qbtn" type="button" data-cmd="help">help</button>
+          <button class="qbtn sep" type="button" id="undo">Undo last</button>
+          <button class="qbtn" type="button" id="reset">Restart</button>
+        </div>
+      </form>
     </div>
   </div>
 
   <div class="notes">
+    <p id="note-debug" hidden>Debug mode drives Spike's own interactive debugger (<code>spike -d</code>). A browser page cannot pause Spike while it waits for your next command, so each command re-runs the program from reset with your whole command history. Spike is deterministic, so the replay lands in the same state; that is also why <b>Undo last</b> can step backwards.</p>
+    <dl class="ref" id="ref" hidden>
+      <dt>Enter (empty)</dt><dd>Execute one instruction and print it.</dd>
+      <dt>until pc 0 &lt;addr|symbol&gt;</dt><dd>Run silently until hart 0's PC equals the address. Symbol names from the ELF are translated for you.</dd>
+      <dt>untiln pc 0 &lt;addr&gt;</dt><dd>Same, printing every instruction on the way.</dd>
+      <dt>while reg 0 a0 0</dt><dd>Run while register a0 equals 0. <code>until</code>/<code>while</code> also take <code>mem &lt;addr&gt; &lt;value&gt;</code> and <code>insn 0 &lt;encoding&gt;</code>.</dd>
+      <dt>r [n] · rs [n]</dt><dd>Run n instructions, printing them (r) or silently (rs). Without n, runs to the end.</dd>
+      <dt>reg 0 [name] · freg 0 fa0</dt><dd>Show all integer registers, one register, or a floating-point register.</dd>
+      <dt>mem 0 &lt;addr&gt; · str 0 &lt;addr&gt;</dt><dd>Read a 64-bit word or a NUL-terminated string from memory (hex address or symbol).</dd>
+      <dt>pc 0 · insn 0 · priv 0</dt><dd>Current PC, the instruction at it, and the privilege mode.</dd>
+    </dl>
     <p>Programs print through HTIF: Spike's front-end server catches <code>tohost</code> writes and proxies <code>write()</code> to this console. ISA tests print nothing on success; a failure reports <code>*** FAILED *** (tohost = N)</code>, where <code>N &gt;&gt; 1</code> is the failing test case. Benchmarks report <code>tohost = 1337</code> when they take an unexpected trap; try <code>mm</code> on the rv64imac hart, which has no FPU.</p>
-    <p>This build passes 109 of 109 rv64u{i,m,a,f,d,c} tests and produces instruction traces identical to native Spike. Uploaded ELFs must be bare-metal programs linked at <code>0x80000000</code> that exit through <code>tohost</code>; Linux binaries need a proxy kernel, which is not included.</p>
+    <p><span id="b-verify">This build was checked against native Spike with the riscv-tests suite.</span> Uploaded ELFs must be bare-metal programs linked at <code>0x80000000</code> that exit through <code>tohost</code>; Linux binaries need a proxy kernel, which is not included.</p>
   </div>
 </div>
 
 <script>
 (() => {
   const $ = (id) => document.getElementById(id);
-  const out = $('out'), pill = $('pill'), cmd = $('cmd'), meta = $('meta');
-  const runBtn = $('run'), stopBtn = $('stop');
-  let bundle = null, wasmModule = null, worker = null, upload = null, programs = [];
+  const out = $('out'), pill = $('pill'), cmd = $('cmd'), meta = $('meta'), where = $('where');
+  const runBtn = $('run'), stopBtn = $('stop'), dbgInput = $('dbg-cmd');
+  let bundle = null, wasmModule = null, worker = null, ticker = null, upload = null, programs = [];
+  let mode = 'run', history = [], recall = -1, symbols = [], symByName = new Map(), funcs = [];
 
   const b64 = (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0)).buffer;
   const kb = (n) => (n / 1024).toFixed(1) + ' KB';
+  const hex = (n) => '0x' + n.toString(16).padStart(8, '0');
 
   function setPill(cls, text) { pill.className = 'pill ' + cls; pill.textContent = text; }
-  function append(text, cls) {
-    if (!text) return;
+  function line(text, cls) {
     const span = document.createElement('span');
     if (cls) span.className = cls;
     span.textContent = text + '\n';
-    out.appendChild(span);
-    out.scrollTop = out.scrollHeight;
+    return span;
   }
+  function append(text, cls) { if (!text) return; out.appendChild(line(text, cls)); out.scrollTop = out.scrollHeight; }
 
+  // ---------- ELF symbols (ELF64, little-endian) ----------
+  function readSymbols(buf) {
+    try {
+      const v = new DataView(buf), u8 = new Uint8Array(buf);
+      if (v.getUint32(0) !== 0x7f454c46 || u8[4] !== 2 || u8[5] !== 1) return [];
+      const shoff = Number(v.getBigUint64(0x28, true)), shentsize = v.getUint16(0x3a, true), shnum = v.getUint16(0x3c, true);
+      const sh = (i) => {
+        const o = shoff + i * shentsize;
+        return { type: v.getUint32(o + 4, true), off: Number(v.getBigUint64(o + 0x18, true)), size: Number(v.getBigUint64(o + 0x20, true)), link: v.getUint32(o + 0x28, true) };
+      };
+      const td = new TextDecoder(), seen = new Set(), res = [];
+      for (let i = 0; i < shnum; i++) {
+        const s = sh(i);
+        if (s.type !== 2) continue;                 // SHT_SYMTAB
+        const str = sh(s.link);
+        for (let o = s.off + 24; o + 24 <= s.off + s.size; o += 24) {
+          const nameOff = v.getUint32(o, true), info = u8[o + 4], shndx = v.getUint16(o + 6, true);
+          const type = info & 0xf, value = Number(v.getBigUint64(o + 8, true));
+          if (shndx === 0 || shndx >= 0xff00 || !(type === 0 || type === 2) || !value) continue;   // NOTYPE labels and FUNCs
+          let end = str.off + nameOff; while (u8[end]) end++;
+          const name = td.decode(u8.subarray(str.off + nameOff, end));
+          if (!name || name.startsWith('.L') || name.startsWith('$') || seen.has(name)) continue;
+          seen.add(name);
+          res.push({ name, addr: value, func: type === 2 });
+        }
+      }
+      return res.sort((a, b) => a.addr - b.addr || a.name.localeCompare(b.name));
+    } catch { return []; }
+  }
+  function locate(pc) {
+    let best = null;
+    for (const s of symbols) { if (s.addr <= pc) best = s; else break; }
+    if (!best) return hex(pc);
+    const off = pc - best.addr;
+    return best.name + (off ? '+0x' + off.toString(16) : '');
+  }
+  function renderSymbols() {
+    const box = $('syms'), f = $('sym-filter').value.trim().toLowerCase();
+    box.textContent = '';
+    const list = symbols.filter((s) => !f || s.name.toLowerCase().includes(f)).slice(0, 300);
+    if (!list.length) { box.appendChild(Object.assign(document.createElement('p'), { className: 'hint', textContent: symbols.length ? 'No symbol matches.' : 'This ELF has no symbol table.' })); return; }
+    for (const s of list) {
+      const b = document.createElement('button');
+      b.type = 'button'; b.className = 'sym'; b.title = 'until pc 0 ' + s.name;
+      b.innerHTML = '<span></span><span></span>';
+      b.firstChild.textContent = s.name; b.lastChild.textContent = hex(s.addr);
+      b.addEventListener('click', () => send('until pc 0 ' + s.name));
+      box.appendChild(b);
+    }
+  }
+  $('sym-filter').addEventListener('input', renderSymbols);
+
+  // ---------- program list ----------
   function renderPrograms() {
     const box = $('progs');
     let group = '';
     programs.forEach((p, i) => {
       if (p.group !== group) {
         group = p.group;
-        const g = document.createElement('p');
-        g.className = 'group-name'; g.textContent = group;
-        box.appendChild(g);
+        box.appendChild(Object.assign(document.createElement('p'), { className: 'group-name', textContent: group }));
       }
       const row = document.createElement('label');
       row.className = 'prog';
@@ -216,17 +344,25 @@ pre#out .sys { color: var(--term-dim); font-style: italic; }
       row.htmlFor = input.id;
       row.querySelector('.n').textContent = p.name;
       row.querySelector('.s').textContent = kb(p.size);
-      input.addEventListener('change', () => { upload = null; $('file-name').textContent = ''; showDesc(); });
+      input.addEventListener('change', () => { upload = null; $('file-name').textContent = ''; programChanged(); });
       box.appendChild(row);
     });
-    showDesc();
   }
   function selected() {
     if (upload) return upload;
     const i = document.querySelector('input[name="prog"]:checked');
     return programs[i ? +i.value : 0];
   }
-  function showDesc() { $('desc').textContent = selected().desc; }
+  function elfOf(p) { return p.elf ? p.elf : (p.elfBuf ||= b64(p.b64)); }
+  function programChanged() {
+    const p = selected();
+    $('desc').textContent = p.desc;
+    symbols = readSymbols(elfOf(p));
+    symByName = new Map(symbols.map((s) => [s.name, s.addr]));
+    $('sym-filter').value = '';
+    renderSymbols();
+    if (mode === 'debug' && wasmModule) { history = []; replay(); }
+  }
 
   $('elf-file').addEventListener('change', async (e) => {
     const f = e.target.files[0];
@@ -235,66 +371,179 @@ pre#out .sys { color: var(--term-dim); font-style: italic; }
     const magic = new Uint8Array(buf, 0, 4);
     if (!(magic[0] === 0x7f && magic[1] === 0x45 && magic[2] === 0x4c && magic[3] === 0x46)) {
       $('file-name').textContent = f.name + ' is not an ELF file.';
-      upload = null; return;
+      return;
     }
     upload = { name: f.name, file: f.name, size: buf.byteLength, desc: 'Your program (' + kb(buf.byteLength) + ').', elf: buf };
     document.querySelectorAll('input[name="prog"]').forEach((r) => (r.checked = false));
     $('file-name').textContent = f.name;
-    showDesc();
+    programChanged();
   });
 
+  // ---------- simulation ----------
   function stop(reason) {
     if (worker) { worker.terminate(); worker = null; }
+    if (ticker) { clearInterval(ticker); ticker = null; }
     runBtn.disabled = !wasmModule; stopBtn.disabled = true;
+    document.querySelectorAll('.qbtn').forEach((b) => (b.disabled = false));
     if (reason) { append(reason, 'sys'); setPill('', 'stopped'); }
+  }
+
+  function launch({ args, input, onChunk, onDone }) {
+    stop();
+    out.textContent = ''; meta.textContent = '';
+    setPill('run', input == null ? 'running' : 'replaying');
+    runBtn.disabled = true; stopBtn.disabled = false;
+    const t0 = performance.now();
+    ticker = setInterval(() => { meta.textContent = ((performance.now() - t0) / 1000).toFixed(1) + ' s'; }, 200);
+    worker = new Worker('worker.js');
+    worker.onmessage = (e) => {
+      const m = e.data;
+      if (m.type === 'chunk') onChunk(m.lines);
+      else if (m.type === 'done') { const w = worker; stop(); meta.textContent = (m.ms / 1000).toFixed(2) + ' s'; onDone(m); }
+    };
+    worker.onerror = (e) => { append('[worker error] ' + e.message, 'e'); setPill('bad', 'error'); stop(); };
+    const isa = $('isa').value;
+    worker.postMessage({ module: wasmModule, elf: elfOf(selected()).slice(0), dtb: b64(bundle.dtbs[isa]), args, input });
+  }
+
+  function showCommand(extra) {
+    const isa = $('isa').value, p = selected();
+    cmd.innerHTML = '';
+    cmd.append('$ spike --isa=' + isa + ' -m256 --dtb=' + isa + '.dtb' + extra);
+    const b = document.createElement('b'); b.textContent = p.file; cmd.append(b);
   }
 
   function run() {
     if (!wasmModule) return;
-    stop();
-    const p = selected();
+    if (mode === 'debug') { history = []; replay(); return; }
     const isa = $('isa').value, trace = $('trace').checked;
-    const args = ['--isa=' + isa, '-m256', '--dtb=/sim.dtb'].concat(trace ? ['-l'] : [], ['/prog.elf']);
-    cmd.innerHTML = '';
-    cmd.append('$ spike --isa=' + isa + ' -m256 --dtb=' + isa + '.dtb' + (trace ? ' -l ' : ' '));
-    const b = document.createElement('b'); b.textContent = p.file; cmd.append(b);
-    out.textContent = ''; meta.textContent = '';
-    setPill('run', 'running');
-    runBtn.disabled = true; stopBtn.disabled = false;
-    const t0 = performance.now();
-    const ticker = setInterval(() => { meta.textContent = ((performance.now() - t0) / 1000).toFixed(1) + ' s'; }, 200);
-
-    worker = new Worker('worker.js');
-    worker.onmessage = (e) => {
-      const m = e.data;
-      if (m.type === 'chunk') {
+    showCommand(trace ? ' -l ' : ' ');
+    where.hidden = true;
+    launch({
+      args: ['--isa=' + isa, '-m256', '--dtb=/sim.dtb'].concat(trace ? ['-l'] : [], ['/prog.elf']),
+      onChunk(lines) {
         const frag = document.createDocumentFragment();
-        for (const [k, s] of m.lines) {
-          const span = document.createElement('span');
-          if (k !== 'o') span.className = k;
-          span.textContent = s + '\n';
-          frag.appendChild(span);
-        }
+        for (const [k, s] of lines) frag.appendChild(line(s, k === 'o' ? '' : k));
         out.appendChild(frag); out.scrollTop = out.scrollHeight;
-      } else if (m.type === 'done') {
-        clearInterval(ticker);
-        meta.textContent = (m.ms / 1000).toFixed(2) + ' s';
+      },
+      onDone(m) {
         if (m.traceTotal > m.traceShown) append('… trace truncated: showing ' + m.traceShown.toLocaleString() + ' of ' + m.traceTotal.toLocaleString() + ' instructions', 'sys');
         else if (m.traceTotal) append(m.traceTotal.toLocaleString() + ' instructions traced', 'sys');
         if (m.exitCode === 0) setPill('ok', 'exit 0 · pass');
         else setPill('bad', m.exitCode == null ? 'error' : 'exit ' + m.exitCode + ' · fail');
         if (!out.textContent.trim()) append('(no output — program exited with code ' + m.exitCode + ')', 'sys');
-        stop();
-      }
-    };
-    worker.onerror = (e) => { clearInterval(ticker); append('[worker error] ' + e.message, 'e'); setPill('bad', 'error'); stop(); };
-    const elf = p.elf ? p.elf.slice(0) : b64(p.b64);
-    worker.postMessage({ module: wasmModule, elf, dtb: b64(bundle.dtbs[isa]), args });
-    stopBtn.onclick = () => { clearInterval(ticker); stop('Stopped by user.'); };
+      },
+    });
   }
 
+  // Debug: replay the session. stdin = history + hidden "pc 0" (for the status bar) + "q".
+  function replay() {
+    const isa = $('isa').value, n = history.length;
+    showCommand(' -d ');
+    const input = history.map((h) => h.resolved + '\n').join('') + 'pc 0\nq\n';
+    let idx = -1, pcText = null;
+    launch({
+      args: ['--isa=' + isa, '-m256', '--dtb=/sim.dtb', '-d', '/prog.elf'],
+      input,
+      onChunk(lines) {
+        const frag = document.createDocumentFragment();
+        for (const [k, s, i] of lines) {
+          if (k === 'c') {
+            idx = i;
+            if (i < n) {
+              const h = history[i], span = document.createElement('span');
+              span.className = 'c';
+              span.append('(spike) ' + h.raw);
+              if (h.note) { const c = document.createElement('i'); c.textContent = '   # ' + h.note; span.append(c); }
+              span.append('\n');
+              frag.appendChild(span);
+            }
+            continue;
+          }
+          if (idx === n) { if (pcText === null && /^0x[0-9a-f]+$/i.test(s.trim())) pcText = s.trim(); continue; }
+          if (idx > n) continue;
+          frag.appendChild(line(s, k === 'o' ? '' : k === 'e' ? 'd' : k));
+        }
+        out.appendChild(frag); out.scrollTop = out.scrollHeight;
+      },
+      onDone(m) {
+        if (m.linesDropped) append('… transcript truncated after 20,000 lines (' + m.linesDropped.toLocaleString() + ' more). Prefer rs or until for long runs.', 'sys');
+        const paused = m.commandsRead >= n + 2;
+        if (paused) {
+          const pc = pcText ? Number(BigInt(pcText)) : null;
+          where.hidden = pc == null;
+          if (pc != null) where.textContent = 'pc ' + hex(pc) + ' · ' + locate(pc);
+          setPill('run', 'paused');
+          if (!n) append('Stopped at reset, before the first instruction. Type a command below, or click a symbol.', 'sys');
+        } else {
+          where.hidden = true;
+          const ran = Math.max(0, m.commandsRead - 1);
+          if (ran < n) append('The program finished during command ' + (ran + 1) + '; the commands after it did not run. Use Undo last to step back.', 'sys');
+          else append('The program finished.', 'sys');
+          if (m.exitCode === 0) setPill('ok', 'exit 0 · finished');
+          else setPill('bad', m.exitCode == null ? 'error' : 'exit ' + m.exitCode);
+        }
+        dbgInput.focus({ preventScroll: true });
+      },
+    });
+  }
+
+  // Translate a trailing symbol name into its hex address for commands that take addresses.
+  function resolve(raw) {
+    const t = raw.trim().split(/\s+/);
+    if (raw.trim() === '') return { raw: '', resolved: '' };
+    const last = t[t.length - 1];
+    const addrCmds = ['until', 'untiln', 'while', 'mem', 'str'];
+    if (addrCmds.includes(t[0]) && symByName.has(last)) {
+      const a = symByName.get(last);
+      t[t.length - 1] = hex(a);
+      return { raw: raw.trim(), resolved: t.join(' '), note: last + ' = ' + hex(a) };
+    }
+    if (['until', 'untiln', 'while'].includes(t[0]) && t[1] === 'mem' && t.length === 4 && symByName.has(t[2])) {
+      t[2] = hex(symByName.get(t[2]));
+      return { raw: raw.trim(), resolved: t.join(' ') };
+    }
+    return { raw: raw.trim(), resolved: raw.trim() };
+  }
+
+  function send(text) {
+    if (!wasmModule || worker) return;
+    if (mode !== 'debug') { setMode('debug'); }
+    if (/^(q|quit)$/.test(text.trim())) { append('Use Restart to begin a new session; quit would end this one.', 'sys'); return; }
+    history.push(resolve(text));
+    recall = -1;
+    replay();
+  }
+
+  $('dbg').addEventListener('submit', (e) => { e.preventDefault(); const v = dbgInput.value; dbgInput.value = ''; send(v); });
+  dbgInput.addEventListener('keydown', (e) => {
+    const cmds = history.map((h) => h.raw).filter(Boolean);
+    if (e.key === 'ArrowUp' && cmds.length) { e.preventDefault(); recall = recall < 0 ? cmds.length - 1 : Math.max(0, recall - 1); dbgInput.value = cmds[recall]; }
+    if (e.key === 'ArrowDown' && recall >= 0) { e.preventDefault(); recall++; dbgInput.value = recall < cmds.length ? cmds[recall] : ''; if (recall >= cmds.length) recall = -1; }
+  });
+  document.querySelectorAll('.qbtn[data-cmd]').forEach((b) => b.addEventListener('click', () => send(b.dataset.cmd)));
+  $('undo').addEventListener('click', () => { if (history.length && !worker) { history.pop(); replay(); } });
+  $('reset').addEventListener('click', () => { if (!worker) { history = []; replay(); } });
+
+  // ---------- mode ----------
+  function setMode(m) {
+    mode = m;
+    $('mode-' + m).checked = true;
+    const dbg = m === 'debug';
+    $('dbg').hidden = !dbg; $('syms-section').hidden = !dbg; $('note-debug').hidden = !dbg; $('ref').hidden = !dbg;
+    $('trace-row').hidden = dbg;
+    $('mode-hint').textContent = dbg ? 'Starts Spike with -d and stops before the first instruction.' : 'Runs the program to completion.';
+    runBtn.textContent = dbg ? 'Restart session' : 'Run';
+    $('run-hint').textContent = dbg ? 'Arrow Up/Down recalls earlier commands' : 'Ctrl + Enter runs the selected program';
+    where.hidden = true;
+    if (wasmModule && !worker) { history = []; dbg ? replay() : run(); }
+  }
+  document.querySelectorAll('input[name="mode"]').forEach((r) => r.addEventListener('change', () => setMode(r.value)));
+  $('isa').addEventListener('change', () => { if (mode === 'debug' && wasmModule && !worker) { history = []; replay(); } });
+
+  stopBtn.addEventListener('click', () => stop('Stopped by user.'));
   $('rack').addEventListener('submit', (e) => { e.preventDefault(); run(); });
-  document.addEventListener('keydown', (e) => { if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); run(); } });
+  document.addEventListener('keydown', (e) => { if ((e.ctrlKey || e.metaKey) && e.key === 'Enter' && mode === 'run') { e.preventDefault(); run(); } });
 
   async function compileWasm() {
     const res = await fetch('spike-web.wasm');
@@ -307,9 +556,14 @@ pre#out .sys { color: var(--term-dim); font-style: italic; }
     try {
       const [b, mod] = await Promise.all([fetch('bundle.json').then((r) => r.json()), compileWasm()]);
       bundle = b; programs = b.programs; wasmModule = mod;
+      const info = b.build || {}, v = info.verify || {};
+      if (info.spike) $('b-spike').textContent = info.spike.slice(0, 7);
+      if (info.emscripten) $('b-emcc').textContent = info.emscripten;
+      if (v.tests_passed) $('b-verify').textContent = 'This build passes ' + v.tests_passed + ' rv64u{i,m,a,f,d,c} tests and produced instruction traces identical to native Spike on ' + v.traces_identical + ' tests (' + v.date + ').';
       renderPrograms();
+      programChanged();
       runBtn.disabled = false;
-      run();   // open with a working example
+      if (location.hash === '#debug') setMode('debug'); else run();   // open with a working example
     } catch (err) {
       out.textContent = '';
       append('Could not load the simulator: ' + err.message, 'e');

@@ -1,0 +1,20 @@
+[
+  {"group": "Demo", "name": "hello", "src": "bench:hello.riscv", "desc": "Greets you, decodes the misa CSR and prints Fibonacci numbers."},
+  {"group": "Benchmarks", "name": "dhrystone", "src": "bench:dhrystone.riscv", "desc": "Classic integer benchmark; reports Dhrystones per second."},
+  {"group": "Benchmarks", "name": "towers", "src": "bench:towers.riscv", "desc": "Towers of Hanoi, recursive."},
+  {"group": "Benchmarks", "name": "qsort", "src": "bench:qsort.riscv", "desc": "Quicksort of an integer array."},
+  {"group": "Benchmarks", "name": "rsort", "src": "bench:rsort.riscv", "desc": "Radix sort."},
+  {"group": "Benchmarks", "name": "median", "src": "bench:median.riscv", "desc": "1-D three-element median filter."},
+  {"group": "Benchmarks", "name": "multiply", "src": "bench:multiply.riscv", "desc": "Software shift-and-add multiply."},
+  {"group": "Benchmarks", "name": "mm", "src": "bench:mm.riscv", "desc": "Blocked floating-point matrix multiply."},
+  {"group": "Benchmarks", "name": "spmv", "src": "bench:spmv.riscv", "desc": "Double-precision sparse matrix-vector multiply."},
+  {"group": "Benchmarks", "name": "vvadd", "src": "bench:vvadd.riscv", "desc": "Vector-vector add, scalar code."},
+  {"group": "Benchmarks", "name": "memcpy", "src": "bench:memcpy.riscv", "desc": "memcpy throughput."},
+  {"group": "ISA tests", "name": "rv64ui-p-add", "src": "test:rv64ui-p-add", "desc": "Integer ADD, all corner cases."},
+  {"group": "ISA tests", "name": "rv64um-p-mul", "src": "test:rv64um-p-mul", "desc": "M extension: MUL."},
+  {"group": "ISA tests", "name": "rv64ua-p-amoadd_d", "src": "test:rv64ua-p-amoadd_d", "desc": "A extension: 64-bit atomic add."},
+  {"group": "ISA tests", "name": "rv64uf-p-fadd", "src": "test:rv64uf-p-fadd", "desc": "F extension: single-precision add."},
+  {"group": "ISA tests", "name": "rv64ud-p-fdiv", "src": "test:rv64ud-p-fdiv", "desc": "D extension: double-precision divide and sqrt."},
+  {"group": "ISA tests", "name": "rv64uc-p-rvc", "src": "test:rv64uc-p-rvc", "desc": "C extension: compressed instructions."},
+  {"group": "ISA tests", "name": "rv64ui-p-ma_data", "src": "test:rv64ui-p-ma_data", "desc": "Misaligned loads/stores. Expected to fail: Spike does not emulate misaligned access by default."}
+]

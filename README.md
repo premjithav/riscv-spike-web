@@ -22,10 +22,12 @@ Override ISA/memory with `ISA=rv32gc MEM=128 ./scripts/...` (rebuild the DTB if 
 Notes: wasm can't fork `dtc`, so always pass `--dtb=spike.dtb`; `-fwasm-exceptions` is required because Spike throws on every trap.
 
 ## Status
-- Native Spike builds; `run-suite.sh native` → 90/90 rv64u{i,m,a,f,d,c}-p pass (`ma_data` skipped).
-- `spike.dts` / `spike.dtb` are committed (rv64gc, 256 MB) — regenerate if ISA/MEM change.
-- `tools/` (git-ignored) holds a static `dtc` and the xPack `riscv-none-elf-gcc` 14.2.0-3.
-- emsdk needs `storage.googleapis.com` reachable to install.
+- Native and wasm (Node) Spike both pass 109/109 rv64u{i,m,a,f,d,c}-p tests (`ma_data` skipped: misaligned access not emulated by default; fails identically on both).
+- Instruction traces (`-l`) are byte-identical native vs wasm on all 121 tests incl. zfh.
+- wasm32 source fix: `patches/riscv-isa-sim-wasm32.patch` (applied by build-wasm.sh).
+- rv64ua: amocas/zabha tests skipped — xPack GCC 14 lacks zacas/zabha.
+- `spike.dts` / `spike.dtb` committed (rv64gc, 256 MB).
+- Emscripten 6.0.12 is installed in third_party/emsdk from the host (the Cowork VM can't reach storage.googleapis.com).
 
 ## Building inside the Claude Cowork VM
 Shared-folder I/O is slow and limits open files, so build objects on VM-local disk:

@@ -24,7 +24,7 @@ Spike's own interactive debugger, with no server-side simulation.
 ## Quick start (Ubuntu 22.04 / 24.04, x86_64)
 
 ```bash
-git clone --recurse-submodules https://github.com/<you>/riscv-spike-web.git
+git clone --recurse-submodules https://github.com/premjithav/riscv-spike-web.git
 cd riscv-spike-web
 ./scripts/setup-tools.sh --install-deps   # apt packages, RISC-V GCC, Emscripten (~2 GB, one time)
 ./scripts/build-all.sh                     # native + wasm Spike, tests, verify, demo (~20 min on 2 cores)

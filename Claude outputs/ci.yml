@@ -1,0 +1,95 @@
+# SPDX-License-Identifier: BSD-3-Clause
+name: build
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 3 * * 1"   # Mondays: upstream-canary
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    if: github.event_name != 'schedule'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: System packages
+        run: sudo apt-get update && sudo apt-get install -y build-essential device-tree-compiler xz-utils
+
+      - name: Cache toolchains
+        uses: actions/cache@v4
+        with:
+          path: |
+            tools
+            third_party/emsdk/upstream
+            third_party/emsdk/node
+            third_party/emsdk/downloads
+          key: toolchains-${{ runner.os }}-${{ hashFiles('scripts/setup-tools.sh', 'scripts/env.sh', '.gitmodules') }}
+
+      - name: Set up toolchains
+        run: ./scripts/setup-tools.sh
+
+      - name: Build, verify and assemble demo
+        run: ./scripts/build-all.sh
+
+      - name: Verification result
+        run: cat dist/verify.json
+
+      - name: Upload demo site
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: demo/site
+
+  deploy-pages:
+    needs: build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
+
+  # Builds and verifies the latest upstream Spike without committing anything,
+  # as an early warning before running scripts/update-spike.sh.
+  upstream-canary:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: System packages
+        run: sudo apt-get update && sudo apt-get install -y build-essential device-tree-compiler xz-utils
+      - name: Cache toolchains
+        uses: actions/cache@v4
+        with:
+          path: |
+            tools
+            third_party/emsdk/upstream
+            third_party/emsdk/node
+            third_party/emsdk/downloads
+          key: toolchains-${{ runner.os }}-${{ hashFiles('scripts/setup-tools.sh', 'scripts/env.sh', '.gitmodules') }}
+      - name: Set up toolchains
+        run: ./scripts/setup-tools.sh
+      - name: Move Spike to upstream master
+        run: |
+          git -C third_party/riscv-isa-sim fetch --depth 1 origin master
+          git -C third_party/riscv-isa-sim checkout --detach FETCH_HEAD
+          echo "Testing riscv-isa-sim $(git -C third_party/riscv-isa-sim rev-parse --short=12 HEAD)"
+      - name: Build and verify
+        run: ./scripts/build-all.sh

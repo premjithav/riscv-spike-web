@@ -33,7 +33,7 @@ is not on your `PATH`.
 ## 2. Get the source
 
 ```bash
-git clone --recurse-submodules https://github.com/<you>/riscv-spike-web.git
+git clone --recurse-submodules https://github.com/premjithav/riscv-spike-web.git
 cd riscv-spike-web
 ```
 

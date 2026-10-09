@@ -1,3 +1,8 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Spike Wasm Console</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -46,6 +51,8 @@
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { margin: 0; }
 body { background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 14px; line-height: 1.5; }
 .wrap { max-width: 1240px; margin: 0 auto; padding-inline: 16px; padding-block: 20px 32px; display: grid; gap: 16px; }
 header { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px 24px; }
@@ -88,9 +95,14 @@ select { font: 13px var(--font-mono); padding: 6px 8px; border-radius: 4px; bord
 .check { display: flex; gap: 8px; align-items: flex-start; font-size: 13px; }
 .check input { margin-top: 3px; accent-color: var(--accent); }
 .check small { display: block; color: var(--muted); }
-.actions { display: flex; gap: 8px; }
-.actions .btn { flex: 1; }
-kbd { font-family: var(--font-mono); font-size: 11px; color: var(--muted); }
+.bar-actions { display: flex; gap: 6px; margin-left: 4px; }
+.runbtn, .stopbtn { font: 600 13px var(--font-body); border-radius: 4px; padding: 5px 16px; cursor: pointer; white-space: nowrap; }
+.runbtn { background: var(--accent); color: var(--accent-ink); border: 1px solid var(--accent); min-width: 5.5em; }
+.runbtn:hover:not(:disabled) { filter: brightness(1.12); }
+.stopbtn { background: transparent; color: var(--term-fg); border: 1px solid color-mix(in srgb, var(--term-fg) 28%, transparent); font-weight: 500; }
+.stopbtn:hover:not(:disabled) { border-color: var(--bad); color: var(--bad); }
+.runbtn:focus-visible, .stopbtn:focus-visible { outline: 2px solid var(--prompt); outline-offset: 2px; }
+.runbtn:disabled, .stopbtn:disabled { opacity: 0.45; cursor: not-allowed; }
 
 .console { background: var(--term-bg); color: var(--term-fg); border-radius: var(--r); display: grid; grid-template-rows: auto minmax(0, 1fr); min-height: 520px; overflow: hidden; min-width: 0; }
 .bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 10px 14px; border-bottom: 1px solid color-mix(in srgb, var(--term-fg) 14%, transparent); }
@@ -143,6 +155,8 @@ pre#out .d { color: var(--term-fg); }
 .ref dd { margin: 0; }
 @media (max-width: 520px) { .ref { grid-template-columns: minmax(0, 1fr); } .ref dd { margin-bottom: 6px; } .qbtn.sep { margin-left: 0; } }
 </style>
+</head>
+<body>
 
 <div class="wrap">
   <header>
@@ -199,13 +213,6 @@ pre#out .d { color: var(--term-fg); }
         <div class="syms" id="syms"></div>
         <p class="hint">Click a symbol to run until the PC reaches it.</p>
       </section>
-      <section>
-        <div class="actions">
-          <button class="btn primary" type="submit" id="run" disabled>Run</button>
-          <button class="btn" type="button" id="stop" disabled>Stop</button>
-        </div>
-        <kbd id="run-hint">Ctrl + Enter runs the selected program</kbd>
-      </section>
     </form>
 
     <div class="console">
@@ -214,6 +221,10 @@ pre#out .d { color: var(--term-fg); }
         <span class="where" id="where" hidden></span>
         <span class="meta" id="meta"></span>
         <span class="pill" id="pill">loading</span>
+        <span class="bar-actions">
+          <button class="runbtn" type="submit" form="rack" id="run" title="Ctrl + Enter" disabled>Run</button>
+          <button class="stopbtn" type="button" id="stop" disabled>Stop</button>
+        </span>
       </div>
       <pre id="out" aria-live="polite"><span class="sys">Fetching and compiling spike-web.wasm (7.9 MB)…</span></pre>
       <form class="dbg" id="dbg" hidden autocomplete="off">
@@ -533,8 +544,8 @@ pre#out .d { color: var(--term-fg); }
     $('dbg').hidden = !dbg; $('syms-section').hidden = !dbg; $('note-debug').hidden = !dbg; $('ref').hidden = !dbg;
     $('trace-row').hidden = dbg;
     $('mode-hint').textContent = dbg ? 'Starts Spike with -d and stops before the first instruction.' : 'Runs the program to completion.';
-    runBtn.textContent = dbg ? 'Restart session' : 'Run';
-    $('run-hint').textContent = dbg ? 'Arrow Up/Down recalls earlier commands' : 'Ctrl + Enter runs the selected program';
+    runBtn.textContent = dbg ? 'Restart' : 'Run';
+    runBtn.title = dbg ? 'Restart the debug session from reset' : 'Ctrl + Enter';
     where.hidden = true;
     if (wasmModule && !worker) { history = []; dbg ? replay() : run(); }
   }
@@ -572,3 +583,5 @@ pre#out .d { color: var(--term-fg); }
   })();
 })();
 </script>
+</body>
+</html>

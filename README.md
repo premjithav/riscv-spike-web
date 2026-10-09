@@ -39,3 +39,4 @@ Shared-folder I/O is slow and limits open files, so build objects on VM-local di
   `em++ -O2 -fwasm-exceptions -sALLOW_MEMORY_GROWTH=1 -sMAXIMUM_MEMORY=4GB -sSTACK_SIZE=8MB -sMODULARIZE=1 -sEXPORT_NAME=createSpike -sINVOKE_RUN=0 -sEXIT_RUNTIME=1 -sFORCE_FILESYSTEM=1 -sENVIRONMENT=web,worker -sEXPORTED_RUNTIME_METHODS=FS,callMain extension.o spike.o libspike_main.a libriscv.a libdisasm.a libsoftfloat.a libfesvr.a libfdt.a -o spike-web.js`
 - With `--dtb`, Spike takes the hart ISA from the device tree, so the demo ships one DTB per ISA (rv64gc, rv64imac, rv64gcv).
 - `demo/src/hello.c`: bare-metal hello built against riscv-tests/benchmarks/common (printf over HTIF).
+- Debug mode drives `spike -d` by replay: each command re-runs from reset with the full command history on stdin (Spike is deterministic). Spike reads debugger input from fd 2, so the worker routes `FS.read` on fd 2 to stdin; no rebuild needed. ELF symbols are resolved in JS (`until pc 0 main`).

@@ -32,3 +32,10 @@ Notes: wasm can't fork `dtc`, so always pass `--dtb=spike.dtb`; `-fwasm-exceptio
 ## Building inside the Claude Cowork VM
 Shared-folder I/O is slow and limits open files, so build objects on VM-local disk:
 `BUILD_ROOT=$HOME/work ./scripts/build-native.sh` (re-run to resume; each shell call is time-limited).
+
+## Browser demo (`demo/`)
+- `demo/web/index.html` + `worker.js`: page that runs Spike in a Web Worker (one worker per run; the wasm module is compiled once and shared).
+- Browser link (no `--export-dynamic`, so JS is 91 KB and wasm 7.9 MB):
+  `em++ -O2 -fwasm-exceptions -sALLOW_MEMORY_GROWTH=1 -sMAXIMUM_MEMORY=4GB -sSTACK_SIZE=8MB -sMODULARIZE=1 -sEXPORT_NAME=createSpike -sINVOKE_RUN=0 -sEXIT_RUNTIME=1 -sFORCE_FILESYSTEM=1 -sENVIRONMENT=web,worker -sEXPORTED_RUNTIME_METHODS=FS,callMain extension.o spike.o libspike_main.a libriscv.a libdisasm.a libsoftfloat.a libfesvr.a libfdt.a -o spike-web.js`
+- With `--dtb`, Spike takes the hart ISA from the device tree, so the demo ships one DTB per ISA (rv64gc, rv64imac, rv64gcv).
+- `demo/src/hello.c`: bare-metal hello built against riscv-tests/benchmarks/common (printf over HTIF).

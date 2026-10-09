@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: BSD-3-Clause
 # riscv-tests ISA suite + benchmarks (out of tree; nothing in third_party/ changes).
 set -euo pipefail
 source "$(dirname "$0")/env.sh"

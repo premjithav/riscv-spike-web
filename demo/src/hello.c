@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: BSD-3-Clause
 // Bare-metal hello for Spike: printf goes through HTIF (tohost/fromhost)
 #include <stdint.h>
 #include "util.h"

@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: BSD-3-Clause
 # Move third_party/riscv-isa-sim to a new upstream ref, rebuild everything from
 # scratch, and keep the update only if verify.sh passes. On failure the
 # submodule goes back to the previous commit.

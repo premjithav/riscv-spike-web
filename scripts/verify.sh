@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: BSD-3-Clause
 # Gate for any Spike update: native and wasm must pass the suite, and the wasm
 # instruction trace (-l) must be byte-identical to native on every test.
 # Writes dist/verify.json (read by the demo bundle).

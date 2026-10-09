@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: BSD-3-Clause
 # Usage: run-suite.sh native|wasm   — runs rv64u{i,m,a,f,d,c}-p-* tests
 set -uo pipefail
 source "$(dirname "$0")/env.sh"

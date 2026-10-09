@@ -1,69 +1,100 @@
-# spikey — Spike (RISC-V ISA simulator) → WebAssembly
+# riscv-spike-web
 
-Builds upstream Spike for Node and the browser **without modifying Spike's sources**.
-`third_party/riscv-isa-sim` stays a pristine upstream checkout; every wasm-specific
-choice lives in `scripts/env.sh` and the demo's JavaScript.
+**[Spike](https://github.com/riscv-software-src/riscv-isa-sim), the RISC-V ISA simulator, compiled to WebAssembly.**
+Run RISC-V programs in Node.js or in a browser tab, and step through them with
+Spike's own interactive debugger, with no server-side simulation.
 
-| Path | What |
+- **Unmodified upstream Spike.** Spike is a git submodule that is never edited; every
+  WebAssembly-specific choice is a compiler/linker flag or lives in the demo's JavaScript.
+- **Verified against native.** Each build runs the riscv-tests ISA suite on native and wasm
+  Spike and requires byte-identical instruction traces (`-l`).
+- **One-command Spike updates.** `scripts/update-spike.sh` moves to a new upstream commit,
+  rebuilds, verifies, and commits or rolls back.
+- **Browser demo.** Pick a benchmark, ISA test or your own bare-metal ELF; choose the hart
+  ISA; view an instruction trace; or debug with `until pc 0 main`, `reg`, `mem`, single
+  step and undo.
+
+| | |
 |---|---|
-| `third_party/riscv-isa-sim` | Spike, upstream (submodule, never edited) |
-| `third_party/riscv-tests` | ISA tests + benchmarks (submodule) |
-| `third_party/emsdk` | Emscripten SDK (submodule; toolchain installed locally, 6.0.12) |
-| `scripts/` | build, verify and update pipeline |
-| `demo/web/` | browser demo source (page + Web Worker) |
-| `demo/programs.json`, `demo/make-bundle.py` | which programs the demo ships, and the bundler |
-| `tools/` *(ignored)* | static `dtc`, xPack `riscv-none-elf-gcc` 14.2.0-3 |
+| Spike | `d6cfe9efdb53` (riscv-isa-sim master, Oct 2026) |
+| Emscripten | 6.0.12 |
+| Tests | 109/109 rv64u{i,m,a,f,d,c}-p pass on native and wasm; traces identical on 110 tests |
+| Browser build | `spike-web.js` 91 KB + `spike-web.wasm` 7.9 MB |
 
-## One-time setup
+## Quick start (Ubuntu 22.04 / 24.04, x86_64)
+
 ```bash
-git submodule update --init --recursive --depth 1
-./scripts/setup-tools.sh                       # RISC-V GCC, dtc check, emsdk install/activate
+git clone --recurse-submodules https://github.com/<you>/riscv-spike-web.git
+cd riscv-spike-web
+./scripts/setup-tools.sh --install-deps   # apt packages, RISC-V GCC, Emscripten (~2 GB, one time)
+./scripts/build-all.sh                     # native + wasm Spike, tests, verify, demo (~20 min on 2 cores)
+make serve                                 # open http://localhost:8080
 ```
 
-## Build everything for the current Spike commit
-```bash
-./scripts/build-all.sh     # native → tests → wasm → verify → demo
-python3 -m http.server -d demo/site 8080       # open http://localhost:8080
-```
-Steps (each resumable, safe to re-run):
+Run a program with the Node.js build:
 
-| Script | Output |
+```bash
+node dist/node/spike.js --isa=rv64gc -m256 --dtb=dtb/rv64gc.dtb build/bench/hello.riscv
+```
+
+The full walkthrough, including prerequisites and troubleshooting, is in
+**[docs/SETUP.md](docs/SETUP.md)**.
+
+## Using the demo
+
+| Mode | What it does |
 |---|---|
-| `build-native.sh` | `install/native/bin/spike`, `dtb/<isa>.dtb` (rv64gc, rv64imac, rv64gcv) |
-| `build-tests.sh` | `build/tests/isa/*` (incl. rv64ua via rv64g), `build/bench/*.riscv`, `hello.riscv` |
-| `build-wasm.sh` | `dist/node/spike.{js,wasm}`, `dist/web/spike.{js,wasm}` |
-| `verify.sh` | gate: native + wasm pass the rv64u* suite, `-l` traces byte-identical; writes `dist/verify.json` |
-| `build-demo.sh` | `demo/site/` ready to serve or publish (build info embedded in `bundle.json`) |
+| **Run** | Runs the program to completion. Optional instruction trace (`-l`, first 4,000 instructions). |
+| **Debug** | Starts `spike -d`, stopped at reset. Type debugger commands at the `(spike)` prompt; click a symbol to run to it; **Undo last** steps backwards. |
 
-Build directories are per Spike commit: `build/spike-<sha12>/{native,wasm}` (set `BUILD_ROOT` for a faster disk).
+Useful debugger commands: Enter (step one instruction), `until pc 0 main`,
+`while reg 0 a0 0`, `r 10`, `rs`, `reg 0`, `reg 0 sp`, `freg 0 fa0`, `mem 0 <addr>`,
+`str 0 <addr>`, `insn 0`, `pc 0`. Symbol names are translated to addresses by the page.
 
-## Updating Spike
-```bash
-./scripts/update-spike.sh            # latest upstream master
-./scripts/update-spike.sh <sha|tag>  # specific ref
+Uploaded ELFs must be bare-metal RV64 programs linked at `0x80000000` that exit through
+HTIF `tohost` (like riscv-tests). Linux user programs need the proxy kernel, which is not
+included. See [demo/README.md](demo/README.md) to host the demo, for example on GitHub Pages.
+
+## Repository layout
+
 ```
-Moves the submodule, runs `build-all.sh` in a fresh build dir, and commits the new
-submodule pointer only if `verify.sh` passes. On any failure it restores the previous
-commit and keeps the failed build dir for inspection. It refuses to run if the
-submodule has local edits.
+scripts/            build, verify and update pipeline (start with env.sh)
+demo/web/           browser demo source: index.html + worker.js
+demo/src/hello.c    the demo's hello program
+demo/programs.json  programs bundled into the demo
+docs/               setup, how it works, updating Spike
+third_party/        riscv-isa-sim, riscv-tests, emsdk (submodules, never edited)
+```
 
-## How the port works without source changes
-- **64→32-bit narrowing** (`riscv/mmu.cc`, TLB refill): clang treats it as a default-error
-  warning on wasm32; `-Wno-c++11-narrowing` restores the intended 32-bit truncation.
-- **C++ exceptions**: Spike throws on every trap → `-fwasm-exceptions`.
-- **`--export-dynamic`** (added by Spike's configure for `--extlib`): dropped by overriding
-  the `mcppbs-LDFLAGS` make variable at link time → browser JS 91 KB, wasm 7.9 MB.
-- **Device tree**: wasm can't fork `dtc`, so DTBs are generated natively and passed with
-  `--dtb`. Spike takes the hart ISA from the DTB, hence one DTB per ISA.
-- **Interactive debugger in the browser** (`-d`): commands are replayed from reset
-  (Spike is deterministic). Spike reads debugger input from fd 2; the worker routes
-  `FS.read` on fd 2 to stdin.
+Generated and git-ignored: `tools/`, `build/`, `install/`, `dist/`, `dtb/`, `demo/site/`.
 
-## Status (spike d6cfe9efdb53, emscripten 6.0.12)
-- Native and wasm: 109/109 rv64u{i,m,a,f,d,c}-p (`ma_data` skipped: misaligned access not emulated by default).
-- Instruction traces identical native vs wasm on 110 tests.
-- rv64ua `amocas*` skipped: GCC 14 lacks Zacas.
+| Make target | Script |
+|---|---|
+| `make setup` | `scripts/setup-tools.sh` |
+| `make all` | `scripts/build-all.sh` |
+| `make verify` | `scripts/verify.sh` |
+| `make serve` | serve `demo/site` on port 8080 |
+| `make update` | `scripts/update-spike.sh` (latest upstream master) |
 
-## Building inside the Claude Cowork VM
-Shell calls there are time-limited: use `BUILD_ROOT=$HOME/work` (VM-local disk; the shared
-folder is slow and limits open files) and re-run a step until it finishes.
+## Documentation
+
+- [docs/SETUP.md](docs/SETUP.md): installation and build, step by step
+- [docs/HOW-IT-WORKS.md](docs/HOW-IT-WORKS.md): how Spike runs as wasm without source changes, and how browser debugging works
+- [docs/UPDATING-SPIKE.md](docs/UPDATING-SPIKE.md): moving to a new Spike release
+- [demo/README.md](demo/README.md): running and hosting the browser demo
+- [CONTRIBUTING.md](CONTRIBUTING.md)
+
+## Known limitations
+
+- Single hart, bare-metal programs; no proxy kernel (`pk`) and no Linux boot in the demo.
+- `rv64ui-p-ma_data` fails on both native and wasm: Spike doesn't emulate misaligned
+  accesses by default. It is skipped in the suite.
+- rv64ua `amocas*` tests are not built: the pinned GCC 14 lacks Zacas.
+- Debug mode replays the session from reset for each command, so each command costs a
+  full re-run up to that point. Fine for small programs; slow for very long ones.
+- `--extlib` plugins and `--rbb-port` (remote bitbang) are not available in the browser.
+
+## License
+
+BSD-3-Clause, see [LICENSE](LICENSE). Spike, riscv-tests and emsdk keep their own
+licenses; see [THIRD_PARTY.md](THIRD_PARTY.md).

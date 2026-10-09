@@ -6,3 +6,4 @@ demo/assets/
 demo/site/
 logs/
 tools/
+__pycache__/

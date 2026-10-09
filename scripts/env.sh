@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: BSD-3-Clause
 # Common settings — sourced by every script. Nothing here modifies third_party/.
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 SPIKE_SRC="$ROOT/third_party/riscv-isa-sim"
@@ -15,6 +16,10 @@ DTB_DIR="$ROOT/dtb"                        # generated device trees, one per ISA
 TESTS_BIN="$ROOT/build/tests/isa"
 BENCH_BIN="$ROOT/build/bench"
 
+# Pinned tool versions
+EMSDK_VERSION="${EMSDK_VERSION:-6.0.12}"
+XPACK_GCC_VERSION="${XPACK_GCC_VERSION:-14.2.0-3}"
+
 ISA="${ISA:-rv64gc}"                       # default hart for tests
 DEMO_ISAS="${DEMO_ISAS:-rv64gc rv64imac rv64gcv}"
 MEM="${MEM:-256}"
@@ -25,7 +30,7 @@ RISCV_PREFIX="${RISCV_PREFIX:-riscv-none-elf-}"
 # instead of patching the source.
 WASM_CFLAGS="-O2 -fwasm-exceptions -Wno-c++11-narrowing"
 WASM_COMMON_LINK="-fwasm-exceptions -sALLOW_MEMORY_GROWTH=1 -sMAXIMUM_MEMORY=4GB -sSTACK_SIZE=8MB"
-WASM_NODE_LINK="$WASM_COMMON_LINK -sEXIT_RUNTIME=1 -sNODERAWFS=1"
+WASM_NODE_LINK="-O2 $WASM_COMMON_LINK -sEXIT_RUNTIME=1 -sNODERAWFS=1"
 WASM_WEB_LINK="-O2 $WASM_COMMON_LINK -sMODULARIZE=1 -sEXPORT_NAME=createSpike -sINVOKE_RUN=0 -sEXIT_RUNTIME=1 \
  -sFORCE_FILESYSTEM=1 -sENVIRONMENT=web,worker -sEXPORTED_RUNTIME_METHODS=FS,callMain"
 # Spike's configure adds -Wl,--export-dynamic (for --extlib plugins). Overriding this make
@@ -33,6 +38,10 @@ WASM_WEB_LINK="-O2 $WASM_COMMON_LINK -sMODULARIZE=1 -sEXPORT_NAME=createSpike -s
 WASM_MCPPBS_LDFLAGS="-fwasm-exceptions"
 
 export PATH="$ROOT/tools/bin:$ROOT/tools/riscv-none-elf-gcc/bin:$PATH"
+# Use emsdk's Node.js when there is no system node (needed for the Node.js wasm build).
+if ! command -v node >/dev/null; then
+  for d in "$EMSDK"/node/*/bin; do [ -x "$d/node" ] && export PATH="$PATH:$d" && break; done
+fi
 ulimit -n "$(ulimit -Hn)" 2>/dev/null || true
 JOBS="${JOBS:-$(nproc)}"
 

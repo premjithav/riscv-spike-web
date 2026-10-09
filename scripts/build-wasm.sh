@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: BSD-3-Clause
 # Spike -> WebAssembly with Emscripten, no source changes. Produces
 #   dist/node/spike.js + spike.wasm   (Node, direct file access)
 #   dist/web/spike.js  + spike.wasm   (browser / Web Worker, MODULARIZE createSpike)
@@ -6,7 +7,7 @@
 set -euo pipefail
 source "$(dirname "$0")/env.sh"
 source "$EMSDK/emsdk_env.sh" >/dev/null 2>&1
-command -v emcc >/dev/null || { echo "emcc not found: install emsdk in third_party/emsdk (./emsdk install 6.0.12 && ./emsdk activate 6.0.12)"; exit 1; }
+command -v emcc >/dev/null || { echo "emcc not found: install emsdk in third_party/emsdk (./scripts/setup-tools.sh)"; exit 1; }
 B="$BUILD_DIR/wasm"; mkdir -p "$B" && cd "$B"
 log "wasm spike $SPIKE_SHA in $B ($(emcc --version | head -1 | cut -c1-60))"
 if [ ! -f Makefile ]; then

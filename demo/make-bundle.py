@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: BSD-3-Clause
 """Pack demo programs, per-ISA DTBs and build info into bundle.json for the browser demo."""
 import argparse, base64, json, os
 

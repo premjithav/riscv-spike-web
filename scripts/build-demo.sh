@@ -6,6 +6,7 @@ set -euo pipefail
 source "$(dirname "$0")/env.sh"
 S="$ROOT/demo/site"; mkdir -p "$S"
 cp "$ROOT/demo/web/index.html" "$ROOT/demo/web/worker.js" "$S/"
+mkdir -p "$S/blog" && cp "$ROOT/demo/web/blog/index.html" "$S/blog/"
 cp "$DIST/web/spike.js" "$S/spike-web.js"
 cp "$DIST/web/spike.wasm" "$S/spike-web.wasm"
 EMCC_VER=$(tr -d "\"\n" < "$EMSDK/upstream/emscripten/emscripten-version.txt" 2>/dev/null || true)

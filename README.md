@@ -78,6 +78,7 @@ Generated and git-ignored: `tools/`, `build/`, `install/`, `dist/`, `dtb/`, `dem
 
 ## Documentation
 
+- [Build log](https://premjithav.github.io/riscv-spike-web/blog/): how the port was built, and how AI tools were used
 - [docs/SETUP.md](docs/SETUP.md): installation and build, step by step
 - [docs/HOW-IT-WORKS.md](docs/HOW-IT-WORKS.md): how Spike runs as wasm without source changes, and how browser debugging works
 - [docs/UPDATING-SPIKE.md](docs/UPDATING-SPIKE.md): moving to a new Spike release

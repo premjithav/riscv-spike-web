@@ -1,0 +1,270 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Running Spike in a Browser Tab</title>
+<meta name="description" content="How we ported the Spike RISC-V ISA simulator to WebAssembly without patching it, verified it against native Spike, built a browser debugger, and how AI tools were used.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap">
+<style>
+/* Layout: single reading column (~68ch) with full-width tables, code and the replay diagram. Same palette and type as the demo console. */
+:root {
+  --bg: #f6f7f9;
+  --surface: #ffffff;
+  --ink: #17202c;
+  --muted: #5a6574;
+  --line: #d9dde3;
+  --accent: #2b55c9;
+  --accent-soft: #e4eafa;
+  --code-bg: #121922;
+  --code-fg: #d5dde7;
+  --code-dim: #7f8b9b;
+  --inline-code: #eceff3;
+  --font-display: "IBM Plex Sans Condensed", "Arial Narrow", system-ui, sans-serif;
+  --font-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0e131a; --surface: #161d27; --ink: #e3e8ef; --muted: #96a1b0; --line: #2a3340;
+    --accent: #7d9df0; --accent-soft: #1f2a42; --code-bg: #090d12; --code-fg: #d5dde7; --code-dim: #6f7b8b;
+    --inline-code: #222b37; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0e131a; --surface: #161d27; --ink: #e3e8ef; --muted: #96a1b0; --line: #2a3340;
+  --accent: #7d9df0; --accent-soft: #1f2a42; --code-bg: #090d12; --code-fg: #d5dde7; --code-dim: #6f7b8b;
+  --inline-code: #222b37; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { margin: 0; }
+body { background: var(--bg); color: var(--ink); font: 17px/1.65 var(--font-body); }
+a { color: var(--accent); text-underline-offset: 2px; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+
+.top { border-bottom: 1px solid var(--line); background: var(--surface); }
+.top-in { max-width: 860px; margin: 0 auto; padding-inline: 16px; padding-block: 12px; display: flex; flex-wrap: wrap; gap: 6px 20px; align-items: baseline; justify-content: space-between; }
+.brand { font: 600 15px var(--font-display); letter-spacing: 0.02em; color: var(--ink); text-decoration: none; }
+.brand span { color: var(--accent); }
+.nav { display: flex; gap: 18px; font-size: 14px; }
+
+article { max-width: 860px; margin: 0 auto; padding-inline: 16px; padding-block: 40px 64px; }
+.prose { max-width: 68ch; }
+.eyebrow { font: 500 12px var(--font-mono); text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin: 0 0 10px; }
+h1 { font: 600 clamp(2rem, 5vw, 2.9rem)/1.1 var(--font-display); letter-spacing: 0.005em; margin: 0 0 14px; text-wrap: balance; }
+.byline { color: var(--muted); font-size: 14px; margin: 0 0 32px; display: flex; gap: 6px 16px; flex-wrap: wrap; }
+.lead { font-size: 1.15rem; }
+h2 { font: 600 1.6rem/1.2 var(--font-display); margin: 48px 0 12px; text-wrap: balance; }
+p { margin: 0 0 16px; }
+ul { margin: 0 0 16px; padding-left: 1.3em; }
+li { margin: 0 0 8px; }
+li::marker { color: var(--muted); }
+code { font: 0.86em var(--font-mono); background: var(--inline-code); padding: 1px 5px; border-radius: 4px; white-space: nowrap; }
+td code { white-space: normal; }
+strong { font-weight: 600; }
+
+.wide { margin: 8px 0 24px; overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 15px; line-height: 1.5; background: var(--surface); border: 1px solid var(--line); border-radius: 6px; }
+th, td { text-align: left; vertical-align: top; padding: 10px 14px; border-bottom: 1px solid var(--line); }
+th { font: 600 12px var(--font-mono); text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); background: var(--bg); }
+tr:last-child td { border-bottom: 0; }
+td.num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+td:first-child { min-width: 11em; }
+
+pre { margin: 8px 0 24px; background: var(--code-bg); color: var(--code-fg); padding: 16px 18px; border-radius: 6px; overflow-x: auto; font: 14px/1.6 var(--font-mono); }
+pre code { background: none; padding: 0; font-size: inherit; color: inherit; }
+pre .c { color: var(--code-dim); }
+
+figure { margin: 8px 0 24px; }
+figure svg { width: 100%; height: auto; display: block; background: var(--surface); border: 1px solid var(--line); border-radius: 6px; }
+figcaption { font-size: 14px; color: var(--muted); margin-top: 8px; max-width: 68ch; }
+.d-edge { stroke: var(--muted); }
+.d-box { fill: none; stroke: var(--muted); stroke-width: 1.25; }
+.d-main { fill: var(--accent-soft); stroke: var(--accent); stroke-width: 2; }
+.d-ink { fill: var(--ink); }
+.d-quiet { fill: var(--muted); }
+.d-head { fill: var(--muted); }
+
+.cta { display: flex; flex-wrap: wrap; gap: 12px; margin: 28px 0 0; }
+.btn { display: inline-block; font: 600 14px var(--font-body); padding: 9px 16px; border-radius: 4px; text-decoration: none; border: 1px solid var(--accent); }
+.btn.primary { background: var(--accent); color: var(--surface); }
+.btn.ghost { color: var(--accent); }
+footer { border-top: 1px solid var(--line); color: var(--muted); font-size: 14px; }
+footer .in { max-width: 860px; margin: 0 auto; padding-inline: 16px; padding-block: 20px 32px; }
+@media (max-width: 520px) { body { font-size: 16px; } td:first-child { min-width: 8em; } }
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="top-in">
+    <a class="brand" href="../">Spike <span>Wasm</span> Console</a>
+    <nav class="nav" aria-label="Site">
+      <a href="../">Demo</a>
+      <a href="https://github.com/premjithav/riscv-spike-web">GitHub</a>
+    </nav>
+  </div>
+</header>
+
+<article>
+  <div class="prose">
+    <p class="eyebrow">riscv-spike-web · build log</p>
+    <h1>Running Spike in a Browser Tab</h1>
+    <p class="byline"><time datetime="2026-10-11">11 October 2026</time><span>HDG-Team1</span></p>
+
+    <p class="lead">Spike, the reference RISC-V ISA simulator, now runs inside a browser tab, with its interactive debugger, and its output matches native Spike instruction for instruction. Over three days we built that port as an open-source project, <a href="https://github.com/premjithav/riscv-spike-web">riscv-spike-web</a>.</p>
+    <p>Why a browser? A failing test is easier to discuss when anyone can open a link, step to the failing PC and inspect registers, with nothing to install. The same build is useful in workshops, where students can watch an ISA test execute instruction by instruction.</p>
+    <p>This post covers how the port works without changing Spike's source, how we proved it correct, how it stays easy to update, and how an AI assistant (Claude, in Cowork mode) did much of the hands-on work.</p>
+
+    <h2 id="porting">Porting Spike without touching its source</h2>
+    <p>Spike builds for WebAssembly with Emscripten and its own unmodified autoconf build; every adjustment is a compiler flag, a linker setting or code in the web page. That rule mattered because Spike changes often, and a fork with local patches would fall behind.</p>
+  </div>
+  <div class="wide">
+    <table>
+      <thead><tr><th scope="col">Problem on wasm32</th><th scope="col">Fix</th></tr></thead>
+      <tbody>
+        <tr><td>Spike throws a C++ exception on every trap</td><td><code>-fwasm-exceptions</code> (native WebAssembly exception handling)</td></tr>
+        <tr><td><code>riscv/mmu.cc</code> narrows a 64-bit value into a 32-bit <code>uintptr_t</code>, which clang rejects</td><td><code>-Wno-c++11-narrowing</code>; the truncation is exactly the intended 32-bit pointer arithmetic</td></tr>
+        <tr><td>Spike's configure adds <code>--export-dynamic</code> for plugins, bloating the output to 9.5 MB of JS and 19 MB of wasm</td><td>override the <code>mcppbs-LDFLAGS</code> make variable at link time: 91 KB of JS, 7.9 MB of wasm</td></tr>
+        <tr><td>Spike runs the <code>dtc</code> tool to compile its device tree, and wasm cannot start processes</td><td>generate device trees with native Spike and pass <code>--dtb=</code></td></tr>
+        <tr><td>With <code>--dtb</code>, Spike takes the hart's ISA from the device tree and ignores <code>--isa</code></td><td>one device tree per ISA (rv64gc, rv64imac, rv64gcv)</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="prose">
+    <p>An earlier version carried a one-line patch to <code>mmu.cc</code>. Replacing it with a flag produced a <code>.wasm</code> file of exactly the same size, 7,873,441 bytes.</p>
+
+    <h2 id="verification">Proving it matches native Spike</h2>
+    <p>Every build has to pass a verification gate before it counts: the riscv-tests suite on native and wasm Spike, plus a byte-for-byte comparison of their instruction traces.</p>
+  </div>
+  <div class="wide">
+    <table>
+      <thead><tr><th scope="col">Check</th><th scope="col">Native</th><th scope="col">WebAssembly (Node.js)</th></tr></thead>
+      <tbody>
+        <tr><td>rv64u{i,m,a,f,d,c}-p tests passed</td><td class="num">109 / 109</td><td class="num">109 / 109</td></tr>
+        <tr><td><code>-l</code> instruction traces identical to native</td><td class="num">—</td><td class="num">110 / 110 tests</td></tr>
+        <tr><td>Throughput, 140M-instruction RV64 loop</td><td class="num">~240 MIPS (0.59 s)</td><td class="num">~120 MIPS (1.18 s, incl. ~0.2 s startup)</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="prose">
+    <p>One test, <code>rv64ui-p-ma_data</code>, is skipped on both: Spike doesn't emulate misaligned accesses by default, and it fails identically on native and wasm. The rv64ua atomics tests are built with <code>-march=rv64g</code>, because the pinned GCC 14 lacks the Zacas extension that upstream riscv-tests now asks for.</p>
+    <p>WebAssembly runs at about half native speed. That's fine for debugging, sharing and teaching. High-volume CI regression stays on native Spike.</p>
+
+    <h2 id="debugger">A debugger in a browser tab</h2>
+    <p>The <a href="../">demo page</a> runs Spike in a Web Worker and has two modes: Run, which executes a program to completion, and Debug, which drives Spike's own interactive debugger (<code>spike -d</code>). It ships with ten benchmarks, seven ISA tests and a hello program, and accepts any bare-metal RV64 ELF.</p>
+    <p>The hard part was the debugger. Spike waits for each command with a blocking <code>read()</code>, and a web page cannot pause WebAssembly until the user types without special cross-origin headers that hosts such as GitHub Pages don't send. Spike is deterministic, though, so the page replays instead: each new command re-runs the program from reset with the whole command history as input. The same program and commands always reach the same state, so the transcript looks like a live session, and <strong>Undo</strong> works for free by dropping the last command.</p>
+  </div>
+  <figure>
+    <svg viewBox="0 0 760 212" role="img" aria-label="Every debugger command replays the session from reset" font-family="IBM Plex Sans, system-ui, sans-serif" font-size="13">
+      <defs><marker id="replay-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="d-head"/></marker></defs>
+      <text x="24" y="34" font-size="15" font-weight="600" class="d-ink">Every debugger command replays the session from reset</text>
+      <g fill="none" class="d-edge" stroke-width="1.25">
+        <path d="M176 100H204" marker-end="url(#replay-arrow)"/>
+        <path d="M356 100H384" marker-end="url(#replay-arrow)"/>
+        <path d="M536 100H564" marker-end="url(#replay-arrow)"/>
+        <path d="M640 128V168H100V128" marker-end="url(#replay-arrow)"/>
+      </g>
+      <rect x="24" y="72" width="152" height="56" rx="8" class="d-box"/>
+      <text x="100" y="96" text-anchor="middle" font-weight="600" class="d-ink">Type a command</text>
+      <text x="100" y="114" text-anchor="middle" font-size="11.5" class="d-quiet">e.g. until pc 0 main</text>
+      <rect x="204" y="72" width="152" height="56" rx="8" class="d-box"/>
+      <text x="280" y="96" text-anchor="middle" font-weight="600" class="d-ink">Append to history</text>
+      <text x="280" y="114" text-anchor="middle" font-size="11.5" class="d-quiet">symbols to hex addrs</text>
+      <rect x="384" y="72" width="152" height="56" rx="8" class="d-main"/>
+      <text x="460" y="96" text-anchor="middle" font-weight="600" class="d-ink">Re-run from reset</text>
+      <text x="460" y="114" text-anchor="middle" font-size="11.5" class="d-quiet">stdin: history, then q</text>
+      <rect x="564" y="72" width="152" height="56" rx="8" class="d-box"/>
+      <text x="640" y="96" text-anchor="middle" font-weight="600" class="d-ink">Show transcript</text>
+      <text x="640" y="114" text-anchor="middle" font-size="11.5" class="d-quiet">plus current PC</text>
+      <text x="370" y="190" text-anchor="middle" font-size="11.5" class="d-quiet">next command, or Undo: drop the last one and replay</text>
+    </svg>
+    <figcaption>Each replay runs in a fresh Web Worker; because Spike is deterministic, it lands in exactly the state the previous command left.</figcaption>
+  </figure>
+  <div class="prose">
+    <p>Three small pieces made it work:</p>
+    <ul>
+      <li>Spike reads debugger input from file descriptor 2, which works on a real terminal. The worker redirects reads on fd 2 to stdin, with no change to Spike.</li>
+      <li>The page reads the ELF symbol table, so <code>until pc 0 main</code> works even though Spike only accepts hex addresses.</li>
+      <li>The status bar shows the current PC as <code>symbol+offset</code>, for example <code>main+0xa</code>.</li>
+    </ul>
+    <p>The cost is that every command replays everything before it. Demo programs replay in milliseconds; a program that runs billions of instructions before the point of interest would be slow.</p>
+
+    <h2 id="upstream">Built to follow upstream, and open source</h2>
+    <p>Moving to a new Spike release is one command, and the update is kept only if the verification gate passes. Spike, riscv-tests and the Emscripten SDK are git submodules that are never edited, and build trees are separate per Spike commit, so a new version always builds from scratch.</p>
+  </div>
+  <pre><code>./scripts/update-spike.sh            <span class="c"># latest upstream master</span>
+./scripts/update-spike.sh &lt;sha|tag&gt;  <span class="c"># a specific version</span></code></pre>
+  <div class="prose">
+    <p>The script fetches the new commit, rebuilds native and wasm Spike, the tests and the demo, then runs the gate. If everything passes it commits the new submodule pointer; if anything fails it switches back to the previous commit and keeps the failed build for inspection.</p>
+    <p>The project is published under BSD-3-Clause, the same license as Spike and riscv-tests. A GitHub Actions workflow builds and verifies every push, publishes the demo to GitHub Pages from <code>main</code>, and runs a weekly build against the latest upstream Spike as an early warning. The demo is plain static files, so it can also be hosted on any web server; ours also runs at <a href="https://premjith.in/riscv-spike-web/">premjith.in/riscv-spike-web</a>.</p>
+
+    <h2 id="ai-tools">How AI tools were used</h2>
+    <p>Most of the hands-on work was done by Claude, Anthropic's AI assistant, running in Cowork mode in the Claude desktop app; the engineer set direction, made the decisions, and did the steps that needed his own accounts or administrator rights. Claude didn't just suggest commands: it ran them, read the output, and fixed what broke.</p>
+    <p>It worked in two places:</p>
+    <ul>
+      <li><strong>A cloud workspace</strong> (Ubuntu 24.04) for anything needing tools or network access the laptop sandbox lacked: building static <code>dtc</code> binaries and browser testing.</li>
+      <li><strong>A sandboxed Linux VM on the engineer's laptop</strong>, with the project folder mounted. Builds, test runs and git commits happened here, directly in the real repository. This shell only became available partway through, after the laptop user was added to the <code>kvm</code> group; before that, Claude could only copy files in and out.</li>
+    </ul>
+  </div>
+  <div class="wide">
+    <table>
+      <thead><tr><th scope="col">Work</th><th scope="col">What Claude did</th></tr></thead>
+      <tbody>
+        <tr><td>Planning and research</td><td>Explained the porting approach, checked Spike's build system for wasm blockers, and looked up the desktop app's Linux requirements to get a shell on the laptop</td></tr>
+        <tr><td>Building</td><td>Cloned the submodules, wrote resumable build scripts, worked around the sandbox's limits (no package manager, 3-minute command limit, slow shared folder)</td></tr>
+        <tr><td>Debugging the port</td><td>Found and fixed the narrowing error, the <code>--export-dynamic</code> bloat, the DTB-overrides-ISA behaviour and the fd-2 debugger input</td></tr>
+        <tr><td>Verification</td><td>Wrote the native-vs-wasm gate, measured throughput, and compared traces on every test</td></tr>
+        <tr><td>The web page</td><td>Wrote the demo, tested it in headless Chromium (Playwright) at desktop and phone widths, and published a private preview</td></tr>
+        <tr><td>Release</td><td>Wrote the README, setup guide, design notes, license files, CI workflow and update script</td></tr>
+        <tr><td>This post</td><td>Drafted in Claude Docs from the session's own logs and results, then turned into this page</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="prose">
+    <h2 id="human">Where the human stayed in the loop</h2>
+    <p>The engineer made every decision that changed scope or touched an account: the license and copyright line, the repository name, and whether to publish. Some steps were his by design:</p>
+    <ul>
+      <li><strong>Credentials.</strong> Pushing to GitHub needs a GitHub login, which stayed on the laptop. Claude handed over <code>git push</code> instead of asking for a token.</li>
+      <li><strong>Administrator steps.</strong> Joining the <code>kvm</code> group with <code>sudo usermod</code>, and installing Emscripten's toolchain from a network the sandbox couldn't reach.</li>
+      <li><strong>Protected files.</strong> The sandbox refuses to write CI workflows and Makefiles; Claude sent those two files for the engineer to place.</li>
+    </ul>
+
+    <h2 id="lessons">Lessons learned</h2>
+    <p>The AI made real mistakes, and the useful habit was checking results instead of trusting reports. Three examples:</p>
+    <ul>
+      <li><strong>A commit that wasn't.</strong> Claude reported the debug-mode page as committed, but a stale file sync meant the commit held only a README line. It was caught later by comparing file hashes, and since then every transfer is verified by hash before committing.</li>
+      <li><strong>A cleanup that deleted everything.</strong> A script meant to remove truncated object files found no <code>llvm-nm</code> on its PATH and treated every object as bad. Only scratch files were lost, and it cost a 10-minute rebuild.</li>
+      <li><strong>A page that only worked in one place.</strong> The demo looked right in Claude's preview, but on the engineer's own web server the debugger prompt showed in Run mode. The preview host had been adding a doctype and a <code>[hidden]</code> rule the page relied on; the engineer's screenshot exposed it, and the page is now a complete standalone HTML file.</li>
+    </ul>
+    <p>Other lessons: be honest about limits (the laptop sandbox had no package manager, so tools such as dtc were built in the cloud and copied in), measure before claiming (wasm's 2x slowdown is a measured number), and keep upstream code pristine so updates stay cheap.</p>
+
+    <h2 id="try">Try it yourself</h2>
+    <p>On Ubuntu 22.04 or 24.04 (x86_64), the whole Spike pipeline is three commands, about 20 minutes of build time on 2 cores:</p>
+  </div>
+  <pre><code>git clone --recurse-submodules https://github.com/premjithav/riscv-spike-web.git
+cd riscv-spike-web
+./scripts/setup-tools.sh --install-deps   <span class="c"># apt packages, RISC-V GCC, Emscripten</span>
+./scripts/build-all.sh                     <span class="c"># native + wasm Spike, tests, verify, demo</span>
+make serve                                 <span class="c"># http://localhost:8080</span></code></pre>
+  <div class="prose">
+    <p>Run a program with the Node.js build, or debug it interactively:</p>
+  </div>
+  <pre><code>node dist/node/spike.js --isa=rv64gc -m256 --dtb=dtb/rv64gc.dtb build/bench/hello.riscv
+node dist/node/spike.js -d --isa=rv64gc -m256 --dtb=dtb/rv64gc.dtb build/bench/hello.riscv</code></pre>
+  <div class="prose">
+    <p>In the browser demo, switch to <strong>Debug</strong> and try <code>until pc 0 main</code>, then <code>reg 0 sp</code>, <code>r 5</code> and <strong>Undo last</strong>.</p>
+    <p>The setup guide, design notes and update procedure are in the repository's <a href="https://github.com/premjithav/riscv-spike-web/tree/main/docs"><code>docs/</code></a> folder.</p>
+    <div class="cta">
+      <a class="btn primary" href="../">Open the demo</a>
+      <a class="btn ghost" href="https://github.com/premjithav/riscv-spike-web">View on GitHub</a>
+    </div>
+  </div>
+</article>
+
+<footer><div class="in">riscv-spike-web · BSD-3-Clause · Spike, riscv-tests and emsdk keep their own licenses (<a href="https://github.com/premjithav/riscv-spike-web/blob/main/THIRD_PARTY.md">third-party notices</a>).</div></footer>
+</body>
+</html>
